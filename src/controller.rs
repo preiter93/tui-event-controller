@@ -36,7 +36,7 @@ impl<S, E> EventController<S, E> {
     ///
     /// # Example
     /// ```
-    /// use tui_event_controller::EventController;
+    /// type EventController = tui_event_controller::EventController<AppState, AppEvent>;
     ///
     /// #[derive(Debug)]
     /// struct AppState;
@@ -44,11 +44,9 @@ impl<S, E> EventController<S, E> {
     /// #[derive(Debug)]
     /// struct AppEvent;
     ///
-    /// type EventController = tui_event_controller::EventController<AppState, AppEvent>;
-    ///
-    /// let mut event_ctrl = EventController::new();
-    /// event_ctrl.borrow_mut().add_listener("foo", move |_ctrl, _state, event| {
-    ///     println!("received: {event:?}");
+    /// let controller = EventController::new();
+    /// controller.add_listener("foo", move |ctx, _state| {
+    ///     println!("received: {:?}", ctx.event);
     /// });
     /// ```
     pub fn add_listener<F>(&self, id: &str, callback: F)
@@ -65,13 +63,13 @@ impl<S, E> EventController<S, E> {
     ///
     /// # Example
     /// ```
-    /// use tui_event_controller::EventController;
+    /// type EventController = tui_event_controller::EventController<AppState, AppEvent>;
     ///
     /// struct AppState;
     /// struct AppEvent;
     ///
-    /// let mut event_ctrl = EventController::<AppState, AppEvent>::new();
-    /// event_ctrl.remove_listener("foo");
+    /// let controller = EventController::new();
+    /// controller.remove_listener("foo");
     /// ```
     pub fn remove_listener(&self, id: &str) {
         self.rc.borrow_mut().remove_listener(id);
@@ -79,7 +77,7 @@ impl<S, E> EventController<S, E> {
 
     /// Returns a clone of the event sender.
     ///
-    /// This allows external code to send events to the controller.
+    /// This allows to send events to the controller.
     pub fn get_sender(&self) -> std::sync::mpsc::Sender<E> {
         self.rc.borrow().sender.clone()
     }
