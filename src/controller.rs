@@ -18,7 +18,6 @@ impl<S, E> EventController<S, E> {
     #[must_use]
     pub fn new() -> Self {
         let controller = InternalEventController::new();
-
         Self {
             rc: Rc::new(RefCell::new(controller)),
         }
@@ -78,11 +77,12 @@ impl<S, E> EventController<S, E> {
     /// Returns a clone of the event sender.
     ///
     /// This allows to send events to the controller.
+    #[must_use]
     pub fn get_sender(&self) -> std::sync::mpsc::Sender<E> {
         self.rc.borrow().sender.clone()
     }
 
-    /// Waits for an events and sends the event to all listeners.
+    /// Waits for an events and send the event to all listeners.
     ///
     /// This function will block the current thread until an event
     /// is received. Once the message is receveived, all listeners
@@ -90,30 +90,26 @@ impl<S, E> EventController<S, E> {
     ///
     /// # Errors
     ///
-    /// Returns an error if the channel has hang up.
+    /// Returns an [`mpsc::RecvError`] if the channel has hang up.
     ///
     /// # Example
     /// ```ignore
-    /// use tui_event_controller::{EventController, handle_events};
+    /// type EventController = tui_event_controller::EventController<AppState, AppEvent>;
     ///
     /// struct AppState;
     /// struct AppEvent;
     ///
     /// let mut state = AppState;
-    /// let mut event_ctrl = EventController::<AppState, AppEvent>::new();
+    /// let mut controller = EventController::new();
     ///
-    ///
-    /// recv_and_notify(&event_ctrl, &mut state).unwrap();
+    /// controller.recv_and_notify(&mut state)?;
     /// ```
     pub fn recv_and_notify(&self, state: &mut S) -> Result<(), mpsc::RecvError> {
         let event = self.rc.borrow().receiver.recv()?;
 
         let callbacks = self.rc.borrow().callbacks.clone();
         for callback in callbacks.values() {
-            let ctx = EventContext {
-                controller: self,
-                event: &event,
-            };
+            let ctx = EventContext::new(self, &event);
             (callback)(ctx, state);
         }
 
@@ -128,6 +124,12 @@ impl<S, E> EventController<S, E> {
     }
 }
 
+impl<S, E> Default for EventController<S, E> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Provides event-related data to callbacks.
 ///
 /// - `controller`: A reference to the [`EventController`].
@@ -135,6 +137,12 @@ impl<S, E> EventController<S, E> {
 pub struct EventContext<'a, S, E> {
     pub controller: &'a EventController<S, E>,
     pub event: &'a E,
+}
+
+impl<'a, S, E> EventContext<'a, S, E> {
+    fn new(controller: &'a EventController<S, E>, event: &'a E) -> Self {
+        Self { controller, event }
+    }
 }
 
 type EventCallback<S, E> = Rc<dyn Fn(EventContext<S, E>, &mut S) + 'static>;
