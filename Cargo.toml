@@ -1,13 +1,15 @@
 [package]
-name = "crossterm-events"
+name = "tui-event-controller"
 version = "0.1.0"
 edition = "2024"
 authors = ["preiter <phil.reiter93@gmail.com>"]
-description = "An event manager for crossterm events"
+description = "An event manager for ratatui/crossterm events"
 keywords = ["crossterm", "events", "tui", "ratatui"]
 readme = "README.md"
 license = "MIT"
 
 [dependencies]
 ratatui = { version = "0.29.0", features = ["unstable-widget-ref"] }
-uuid = { version = "1.11.0", features = ["v4"] }
+
+[[example]]
+name = "app"
