@@ -10,7 +10,7 @@ use ratatui::widgets::Widget;
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
-type EventCallback<S, E> = Rc<dyn Fn(&mut S, &E) + 'static>;
+type EventCallback<S, E> = Rc<dyn Fn(&mut EventController<S, E>, &mut S, &E) + 'static>;
 
 /// An event controller for ratatui apps.
 ///
@@ -103,7 +103,7 @@ impl<S, E> EventController<S, E> {
     /// ```
     pub fn add_listener<F>(&mut self, id: &str, callback: F)
     where
-        F: Fn(&mut S, &E) + 'static,
+        F: Fn(&mut EventController<S, E>, &mut S, &E) + 'static,
     {
         self.callbacks.insert(id.to_string(), Rc::new(callback));
     }
@@ -145,23 +145,27 @@ impl<S, E> EventController<S, E> {
     ///     .handle_events(&mut state)
     ///     .expect("failed to handle events");
     /// ```
-    pub fn handle_events(&self, state: &mut S) -> Result<()> {
+    pub fn handle_events(&mut self, state: &mut S) -> Result<()> {
         let event = self.receiver.recv()?;
-        self.notify_listener(state, &event);
+
+        let callbacks = self.callbacks.clone();
+        for callback in callbacks.values() {
+            (callback)(self, state, &event);
+        }
 
         Ok(())
     }
 
-    /// Notify all listener.
-    fn notify_listener(&self, state: &mut S, event: &E) {
-        for callback in self.callbacks.values() {
-            (callback)(state, event);
-        }
-    }
+    // /// Notify all listener.
+    // fn notify_listener(&self, state: &mut S, event: &E) {
+    //     for callback in self.callbacks.values() {
+    //         (callback)(state, event);
+    //     }
+    // }
 }
 
 /// A trait for widgets that can handle events.
-pub trait EventListener<S, E> {
+pub trait EventWidget<S, E> {
     /// Returns a unique key for identifying the widget in the event controller.
     fn key() -> String;
 
@@ -171,7 +175,12 @@ pub trait EventListener<S, E> {
     /// - `state`: A mutable reference to the state associated with the widget.
     /// - `event`: The event to be processed.
     /// - `area`: The area of the widget from the last render.
-    fn handle_event(state: &mut S, event: &E, area: Option<Rect>);
+    fn handle_events(
+        ctrl: &mut EventController<S, E>,
+        state: &mut S,
+        event: &E,
+        area: Option<Rect>,
+    );
 }
 
 /// A wrapper for a widget that integrates with an event controller.
@@ -181,7 +190,7 @@ pub trait EventListener<S, E> {
 /// when it is dropped.
 pub struct EventfulWidget<S, E, W>
 where
-    W: EventListener<S, E>,
+    W: EventWidget<S, E>,
 {
     widget: W,
     ctrl: Rc<RefCell<EventController<S, E>>>,
@@ -192,7 +201,7 @@ impl<S, E, W> EventfulWidget<S, E, W>
 where
     S: 'static,
     E: 'static,
-    W: EventListener<S, E>,
+    W: EventWidget<S, E>,
     for<'a> &'a W: Widget,
 {
     /// Creates a new instance of `EventfulWidget` and registers a
@@ -205,10 +214,11 @@ where
         let ctrl = Rc::clone(controller);
 
         let key = &W::key();
-        ctrl.borrow_mut().add_listener(key, move |state, event| {
-            let area = area_clone.borrow();
-            W::handle_event(state, event, *area);
-        });
+        ctrl.borrow_mut()
+            .add_listener(key, move |ctrl, state, event| {
+                let area = area_clone.borrow();
+                W::handle_events(ctrl, state, event, *area);
+            });
 
         Self { widget, ctrl, area }
     }
@@ -216,7 +226,7 @@ where
 
 impl<S, E, W> Drop for EventfulWidget<S, E, W>
 where
-    W: EventListener<S, E>,
+    W: EventWidget<S, E>,
 {
     /// Removes the listener from the event controller when it is dropped.
     fn drop(&mut self) {
@@ -227,7 +237,7 @@ where
 
 impl<S, E, W> Widget for &mut EventfulWidget<S, E, W>
 where
-    W: EventListener<S, E>,
+    W: EventWidget<S, E>,
     for<'a> &'a W: Widget,
 {
     fn render(self, area: Rect, buf: &mut Buffer) {

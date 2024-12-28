@@ -1,4 +1,4 @@
-use crossterm_events::{EventController, EventListener, EventfulWidget};
+use crossterm_events::{EventController, EventWidget, EventfulWidget};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::{Position, Rect};
@@ -119,12 +119,17 @@ impl MyWidget {
     }
 }
 
-impl EventListener<AppState, AppEvent> for MyWidget {
+impl EventWidget<AppState, AppEvent> for MyWidget {
     fn key() -> String {
         String::from("MyWidget")
     }
 
-    fn handle_event(state: &mut AppState, event: &AppEvent, area: Option<Rect>) {
+    fn handle_events(
+        ctrl: &mut EventController<AppState, AppEvent>,
+        state: &mut AppState,
+        event: &AppEvent,
+        area: Option<Rect>,
+    ) {
         match event {
             AppEvent::Tick => {
                 state.counter += 1;
@@ -135,6 +140,10 @@ impl EventListener<AppState, AppEvent> for MyWidget {
                 if area.filter(|a| a.contains(pos)).is_some() {
                     log_to_file("click");
                 }
+
+                ctrl.add_listener("overwrite", |_, _, _| {
+                    log_to_file("inner event");
+                });
             }
         }
     }
