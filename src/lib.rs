@@ -27,22 +27,22 @@
 //! }
 //!
 //! #[derive(Default)]
-//! struct HomePage;
+//! struct App;
 //!
-//! impl WidgetRef for HomePage {
+//! impl WidgetRef for App {
 //!     fn render_ref(&self, _area: Rect, _buf: &mut Buffer) {}
 //! }
 //!
-//! impl EventfulWidget<AppState, AppEvent> for HomePage {
+//! impl EventfulWidget<AppState, AppEvent> for App {
 //!     fn unique_key() -> String {
-//!         String::from("HomePage")
+//!         String::from("App")
 //!     }
 //!
 //!     fn on_event(ctx: EventContext, state: &mut AppState, _: Option<Rect>) {
 //!         match ctx.event {
 //!             AppEvent::Tick => {
 //!                 state.counter += 1;
-//!                 println!("HomePage: tick {:}", state.counter);
+//!                 println!("App: tick {:}", state.counter);
 //!             }
 //!             AppEvent::Key(_) => {}
 //!         }
@@ -52,17 +52,23 @@
 //! type Result<T> = std::result::Result<T, Box<dyn Error>>;
 //!
 //! fn main() -> Result<()> {
+//!     // Initialize the event controller.
 //!     let controller = EventController::new();
+//!
+//!     // Start an event loop that processes events.
 //!     spawn_event_loop(&controller);
 //!
+//!     // Initialize the application state.
 //!     let mut state = AppState::default();
 //!
-//!     let start_instant = time::Instant::now();
-//!     while !state.should_quit {
-//!         // Render your app
-//!         // app.draw()
+//!     // Create the interactive application widget.
+//!     // The `IWidget` constructor registers the `on_event` callback.
+//!     let app = IWidget::new(App, &controller);
 //!
-//!         // Handle your events
+//!     while !state.should_quit {
+//!         // Draw the app...
+//!
+//!         // Wait for events and notify all event listeners.
 //!         controller.recv_and_notify(&mut state)?;
 //!     }
 //!
@@ -96,7 +102,6 @@
 //!     });
 //! }
 //! ```
-
 mod controller;
 mod widget;
 
