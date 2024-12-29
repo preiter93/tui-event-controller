@@ -17,48 +17,25 @@ enum AppEvent {
     Tick,
 }
 
+#[derive(Default)]
 struct AppState {
     counter: usize,
+    should_quit: bool,
 }
 
-impl AppState {
-    fn new() -> Self {
-        Self { counter: 0 }
-    }
-}
-
-enum Page {
+enum ActivePage {
     HomePage(IWidget<HomePage>),
 }
 
-fn main() -> Result<()> {
-    let controller = EventController::new();
-    spawn_event_publisher(&controller, 500);
-
-    let mut state = AppState::new();
-    let app = IWidget::new(App::new(&controller), &controller);
-
-    let start_instant = Instant::now();
-    while start_instant.elapsed() < Duration::from_secs(2) {
-        let area = Rect::default();
-        let mut buf = Buffer::empty(area);
-
-        app.render_ref(Rect::default(), &mut buf);
-        controller.recv_and_notify(&mut state)?;
-    }
-
-    Ok(())
-}
-
 struct App {
-    active_page: Page,
+    active_page: ActivePage,
 }
 
 impl App {
     fn new(controller: &EventController) -> Self {
         let home_page = IWidget::new(HomePage::default(), &controller);
         Self {
-            active_page: Page::HomePage(home_page),
+            active_page: ActivePage::HomePage(home_page),
         }
     }
 }
@@ -68,10 +45,13 @@ impl EventfulWidget<AppState, AppEvent> for App {
         String::from("App")
     }
 
-    fn on_event(ctx: EventContext, _: &mut AppState, _: Option<Rect>) {
+    fn on_event(ctx: EventContext, state: &mut AppState, _: Option<Rect>) {
         match ctx.event {
             AppEvent::Tick => {
                 println!("App: tick");
+                if state.counter == 3 {
+                    state.should_quit = true;
+                }
             }
         }
     }
@@ -80,7 +60,7 @@ impl EventfulWidget<AppState, AppEvent> for App {
 impl WidgetRef for App {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
         match &self.active_page {
-            Page::HomePage(widget) => widget.render_ref(area, buf),
+            ActivePage::HomePage(widget) => widget.render_ref(area, buf),
         }
     }
 }
@@ -107,7 +87,24 @@ impl WidgetRef for HomePage {
     fn render_ref(&self, _area: Rect, _buf: &mut Buffer) {}
 }
 
-fn spawn_event_publisher(controller: &EventController, tick_rate_ms: u64) {
+fn main() -> Result<()> {
+    let controller = EventController::new();
+    spawn_event_loop(&controller, 500);
+
+    let mut state = AppState::default();
+    let _app = IWidget::new(App::new(&controller), &controller);
+
+    while !state.should_quit {
+        // Draw app
+
+        // Handle events
+        controller.recv_and_notify(&mut state)?;
+    }
+
+    Ok(())
+}
+
+fn spawn_event_loop(controller: &EventController, tick_rate_ms: u64) {
     let tick_rate = Duration::from_millis(tick_rate_ms);
 
     let sender = controller.get_sender();
