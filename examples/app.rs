@@ -88,24 +88,31 @@ impl WidgetRef for HomePage {
 }
 
 fn main() -> Result<()> {
+    // Initialize the event controller.
     let controller = EventController::new();
-    spawn_event_loop(&controller, 500);
 
+    // Start an event loop that processes events.
+    spawn_event_loop(&controller);
+
+    // Initialize the application state.
     let mut state = AppState::default();
+
+    // Create the application widget.
+    // The `IWidget` constructor registers the `EventfulWiget::on_event` event-listener.
     let _app = IWidget::new(App::new(&controller), &controller);
 
     while !state.should_quit {
-        // Draw app
+        // Draw the app...
 
-        // Handle events
+        // Wait for events and notify all event listeners.
         controller.recv_and_notify(&mut state)?;
     }
 
     Ok(())
 }
 
-fn spawn_event_loop(controller: &EventController, tick_rate_ms: u64) {
-    let tick_rate = Duration::from_millis(tick_rate_ms);
+fn spawn_event_loop(controller: &EventController) {
+    let tick_rate = Duration::from_millis(500);
 
     let sender = controller.get_sender();
 
