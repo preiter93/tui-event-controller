@@ -2,7 +2,7 @@
 
 ## Description
 
-A event controller for ratatui apps.
+A event controller for [ratatui](https://github.com/ratatui/ratatui) apps.
 
 ## Example
 
@@ -104,5 +104,9 @@ fn spawn_event_loop(controller: &EventController) {
     });
 }
 ```
+
+## Apps build with `tui-event-controller`
+
+- [Mantui](https://github.com/preiter93/mantui)
 
 License: MIT

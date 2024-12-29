@@ -1,6 +1,6 @@
 //! # Description
 //!
-//! A event controller for ratatui apps.
+//! A event controller for [ratatui](https://github.com/ratatui/ratatui) apps.
 //!
 //! # Example
 //!
@@ -102,6 +102,10 @@
 //!     });
 //! }
 //! ```
+//!
+//! # Apps build with `tui-event-controller`
+//!
+//! - [Mantui](https://github.com/preiter93/mantui)
 mod controller;
 mod widget;
 
